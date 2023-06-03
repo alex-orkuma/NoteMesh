@@ -1,3 +1,60 @@
 ﻿@page "/"
 
-<h1>Hello, world!</h1>
+<button @onclick="() => hubProxy.CreateNote(10, 10)">Create Sticky Note ➕</button>
+<button @onclick="hubProxy.ClearNotes">Clear All Sticky Notes ❌</button>
+
+<svg width="100%" height="100%"
+     @onpointerup="Up"
+     @onpointerleave="Up"
+     @onpointermove="Move">
+    <defs>
+        <filter id="shadow" x="0" y="0" width="200%" height="200%">
+            <feOffset result="offOut" in="SourceAlpha" dx="5" dy="5" />
+            <feGaussianBlur result="blurOut" in="offOut" stdDeviation="2.5" />
+            <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
+        </filter>
+    </defs>
+
+    @foreach (var note in notes)
+    {
+        <!-- This is where each Note will be drawn -->
+        <rect fill="@(note.CanLock(connection.ConnectionId) ? "#FFFF8F" : "#FFDF8F")"
+              x="@note.X.ToString()"
+              y="@note.Y.ToString()"
+              stroke="#DDDD80"
+              stroke-width="1"
+              width="200px"
+              height="200px"
+              filter="url(#shadow)">
+        </rect>
+
+        <foreignObject x="@note.X" y="@((note.Y+30).ToString())" width="200px" height="170px">
+            <textarea @bind=note.Text
+                  @bind:event="oninput"
+                  @bind:after="() => hubProxy.UpdateNoteText(note.Id, note.Text)"
+                      disabled="@(!note.CanLock(connection.ConnectionId))"
+                      class="note-textarea">
+        </textarea>
+        </foreignObject>
+
+        <text>
+            <text @onclick="() => hubProxy.DeleteNote(note.Id)"
+                  x="@note.X.ToString()"
+                  y="@note.Y.ToString()"
+                  alignment-baseline="before-edge"
+                  class="note-markers"
+                  style="pointer-events:@(note.CanLock(connection.ConnectionId) ? "inherit" : "none")">
+                ❌
+            </text>
+            <text @onpointerdown="e => Down(note, e)"
+                  x="@((note.X+180).ToString())"
+                  y="@note.Y.ToString()"
+                  alignment-baseline="before-edge"
+                  class="note-markers"
+                  style="pointer-events:@(note.CanLock(connection.ConnectionId) ? "inherit" : "none")">
+                @(note == editNote || !note.CanLock(connection.ConnectionId) ? "📌" : "📍")
+            </text>
+        </text>
+    }
+
+</svg>
